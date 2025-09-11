@@ -1,10 +1,40 @@
-# Otros archivos temporales y de trabajo de Visual Studio
-Service.dproj.local
+# ==========================
+# Archivos específicos de Embarcadero / Delphi
+# ==========================
+# Archivos locales del proyecto
+*.dproj.local
+*.identcache
+*.stat
+*.dsk
+*.local
 
-# Carpetas de binarios y objetos generados
+# Archivos compilados
 Win32/Debug/
 *.dcu
-Service.exe
+*.dcp
+*.bpl
+*.bpi
+*.dres
+*.rsm
+*.tds
+*.exe
+*.dll
+*.pdb
+*.map
+*.bak
+*~*
 
-# Otros archivos temporales y de trabajo de Visual Studio
-/__history
+# Carpetas generadas automáticamente
+/__history/
+/__recovery/
+Win32/Debug/
+Win32/Release/
+Win64/Debug/
+Win64/Release/
+
+# ==========================
+# Archivos comunes de sistema
+# ==========================
+.DS_Store
+Thumbs.db
+desktop.ini
