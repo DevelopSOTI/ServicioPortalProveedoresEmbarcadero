@@ -18,6 +18,6 @@ uses
 begin
   Application.Initialize;
   Application.CreateForm(TD, D);
-  Application.CreateForm(TM, M); // ACTIVAR PARA INSTALAR EL SERVICIO
+  // Application.CreateForm(TM, M); // ACTIVAR PARA INSTALAR EL SERVICIO
   Application.Run;
 end.
