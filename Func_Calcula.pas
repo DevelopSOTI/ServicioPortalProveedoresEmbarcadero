@@ -141,13 +141,13 @@ begin
   List := TStringList.Create;
   Total := 0;
 
-  actualiza_almacenes := True;
-  actualiza_monedas := True;
-  actualiza_proveedores := True;
-  actualiza_recepciones := True;
+  actualiza_almacenes := False;
+  actualiza_monedas := False;
+  actualiza_proveedores := False;
+  actualiza_recepciones := False;
   actualiza_creditos := True;
-  actualiza_particulares := True;
-  actualiza_facturas := True;
+  actualiza_particulares := False;
+  actualiza_facturas := False;
 
   try
     D.ADOQueryEmpresas.Active := False;
@@ -463,14 +463,16 @@ begin
               D.IBQueryMicrosip.SQL.Add('   AND (de.clave_sis_dest = ''BA'' OR de.clave_sis_dest IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
               D.IBQueryMicrosip.SQL.Add('   AND (db.aplicado = ''S'' OR db.aplicado IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
 
-              if (LAST <> '') then
+              { if (LAST <> '') then
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND (dc.FECHA_HORA_CREACION > ''' + LAST + ''' OR dc.FECHA_HORA_ULT_MODIF > ''' + LAST + ''')');
                 end
               else
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.03.2025''');
-                end;
+                end; }
+
+              D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
 
               D.IBQueryMicrosip.SQL.Add('ORDER BY dc.docto_cp_id');
               D.IBQueryMicrosip.Active := True;

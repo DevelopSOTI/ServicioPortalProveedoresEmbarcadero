@@ -640,10 +640,10 @@ begin
       Exit;
     end;
 
-  if (ACTUALIZA_CREDITOS = False) then
+  { if (ACTUALIZA_CREDITOS = False) then
     begin
       Exit;
-    end;
+    end; }
 
   if (D.AplicaFacturas = True) then
     begin
