@@ -1,4 +1,4 @@
-unit Func_Creditos;
+unit Func_Notas;
 
 interface
 
@@ -9,7 +9,7 @@ uses
   DateUtils, IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdMessageClient, IdSMTP, IdMessage,
   XMLDoc, xmldom, XMLIntf;
 
-  Function ACTUALIZA_CREDITOS():Boolean;
+  Function ACTUALIZA_NOTAS():Boolean;
 
 implementation
 
@@ -131,8 +131,8 @@ begin
 end;
 {$ENDREGION}
 
-{$REGION 'ACTUALIZA_CREDITOS_DET - ACTUALIZA EL DETALLE DEL COBRO EN PROCESO'}
-Function ACTUALIZA_CREDITOS_DET(docto_id_old, credito_id, folio, concepto, empresa_id :string; Fmt :TFormatSettings):Boolean;
+{$REGION 'ACTUALIZA_NOTAS_DET - ACTUALIZA EL DETALLE DEL COBRO EN PROCESO'}
+Function ACTUALIZA_NOTAS_DET(docto_id_old, credito_id, folio, concepto, empresa_id :string; Fmt :TFormatSettings):Boolean;
   var
     impte_docto_cp_id, docto_cp_id, docto_cp_acr_id, importe, impuesto, iva_retenido, isr_retenido, folio_acr, descripcion, sistema_origen, xml, uuid, fecha :string;
     Command :string;
@@ -266,15 +266,15 @@ begin
                       Command := Command + '  ' + QuotedStr(iva_retenido) + ',';
                       Command := Command + '  ' + QuotedStr(isr_retenido) + ',';
                       Command := Command + '  ' + QuotedStr(folio_acr) + ',';
-                      // Command := Command + '  ' + QuotedStr(descripcion) + ',';
-                      Command := Command + '  :DESCRIPCION,';
+                      Command := Command + '  ' + QuotedStr(descripcion) + ',';
+                      //Command := Command + '  :DESCRIPCION,';
                       Command := Command + '  ' + QuotedStr(uuid) + ',';
                       Command := Command + '  ' + QuotedStr(fecha) + ',';
                       Command := Command + '  ' + empresa_id;
                       Command := Command + ')';
 
                       D.MySQL_Command.CommandText := Command;
-                      D.MySQL_Command.Parameters.ParamByName('DESCRIPCION').Value := descripcion;
+                      //D.MySQL_Command.Parameters.ParamByName('DESCRIPCION').Value := descripcion;
                       D.MySQL_Command.Execute;
 
                       // CON QUE ENCUENTRE UN PPD EN EL COBRO DEVUELVE VERDADERO
@@ -306,7 +306,7 @@ begin
 end;
 {$ENDREGION}
 
-Function ACTUALIZA_CREDITOS():Boolean;
+Function ACTUALIZA_NOTAS():Boolean;
   var
     Resultado :Boolean;
     Fmt :TFormatSettings;
@@ -320,7 +320,7 @@ begin
   Fmt.LongTimeFormat := 'hh:nn:ss';
   Fmt.TimeSeparator := ':';
 
-  if (FileExists(ExtractFilePath(ParamStr(0)) + '/Update/Creditos')) then
+  if (FileExists(ExtractFilePath(ParamStr(0)) + '/Update/Notas')) then
     begin
       try
         D.Conexion_MySQL.Connected := False;
@@ -331,13 +331,13 @@ begin
         D.MySQL_Command.Execute;
 
         D.JvCsvDataSet_Credito.Close;
-        D.JvCsvDataSet_Credito.FileName := ExtractFilePath(ParamStr(0)) + '/Update/Creditos';
+        D.JvCsvDataSet_Credito.FileName := ExtractFilePath(ParamStr(0)) + '/Update/Notas';
         D.JvCsvDataSet_Credito.Open;
         D.JvCsvDataSet_Credito.First;
         while not D.JvCsvDataSet_Credito.Eof do
           begin
             Application.ProcessMessages;
-            Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Buscando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
+            Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Buscando nota ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
 
             try
               // CONEXIÓN MICROSIP (SI ES QUE CAMBIA DE EMPRESA)
@@ -381,7 +381,7 @@ begin
                     begin
                       Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Registrando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
 
-                      {if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then}
+                      if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
                         begin
                           try
                             {$REGION 'REGISTRA EL ENCABEZADO DEL CREDITO EN EL PORTAL'}
@@ -434,7 +434,7 @@ begin
                             credito_id := D.ADOQueryActual.FieldByName('CREDITO_ID').AsString;
                             {$ENDREGION}
 
-                            ACTUALIZA_CREDITOS_DET('', credito_id, folio, concepto, Empresa_ID, Fmt);
+                            ACTUALIZA_NOTAS_DET('', credito_id, folio, concepto, Empresa_ID, Fmt);
                           except
                             on E : Exception do
                               begin
@@ -446,9 +446,9 @@ begin
                     end
                   else
                     begin
-                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Actualizando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
+                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Actualizando nota ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
 
-                      {if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then}
+                      if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
                         begin
                           try
                             {$REGION 'ACTUALIZA EL ENCABEZADO DEL CREDITO EN EL PORTAL'}
@@ -463,7 +463,7 @@ begin
                             D.MySQL_Command.Execute;
                             {$ENDREGION}
 
-                            ACTUALIZA_CREDITOS_DET(docto_id_old, credito_id, folio, concepto, Empresa_ID, Fmt);
+                            ACTUALIZA_NOTAS_DET(docto_id_old, credito_id, folio, concepto, Empresa_ID, Fmt);
                           except
                             on E : Exception do
                               begin
@@ -508,7 +508,7 @@ begin
             except
               on E : Exception do
                 begin
-                  Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar el credito ' + folio);
+                  Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar la nota ' + folio);
                   Resultado := False;
                 end;
             end;
@@ -527,13 +527,13 @@ begin
       except
         on E : Exception do
           begin
-            Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al sincronizar los creditos');
+            Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al sincronizar las notas');
             Resultado := False;
           end;
       end;
 
       D.Conexion_MySQL.Connected := False;
-      DeleteFile(PChar(ExtractFilePath(ParamStr(0)) + '/Update/Creditos'));
+      //DeleteFile(PChar(ExtractFilePath(ParamStr(0)) + '/Update/Notas'));
     end
   else
     begin

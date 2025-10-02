@@ -35,7 +35,7 @@ uses
 implementation
 
 uses
-  Data, Form, Main, Func_Catalogos, Func_Recepciones, Func_Creditos, Func_Facturas_3_2, Func_Facturas_3_3;
+  Data, Form, Main, Func_Catalogos, Func_Recepciones, Func_Creditos, Func_Notas, Func_Facturas_3_2, Func_Facturas_3_3;
 
 {$REGION 'FUNCIONES PARA EL CONTROL DEL SERVICIO (INSTALACIÓN, INICIO, DETENER Y DESINSTALACIÓN)'}
 
@@ -639,6 +639,12 @@ begin
     begin
       Exit;
     end;
+
+    if (ACTUALIZA_NOTAS = False) then
+    begin
+      Exit;
+    end;
+
 
   { if (ACTUALIZA_CREDITOS = False) then
     begin
