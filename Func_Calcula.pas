@@ -135,7 +135,7 @@ Function CALCULA_REGISTROS_EMPRESAS(var Total :Integer):Boolean;
     Empresa_ID, Empresa_N, LAST, Line: string;
     // XML :string;
     List :TStringList;
-    actualiza_almacenes, actualiza_monedas, actualiza_proveedores, actualiza_recepciones, actualiza_creditos, actualiza_particulares, actualiza_facturas :Boolean;
+    actualiza_almacenes, actualiza_monedas, actualiza_proveedores, actualiza_recepciones, actualiza_creditos, actualiza_notas, actualiza_particulares, actualiza_facturas :Boolean;
     descripcion: string;
 begin
   List := TStringList.Create;
@@ -145,7 +145,8 @@ begin
   actualiza_monedas := False;
   actualiza_proveedores := False;
   actualiza_recepciones := False;
-  actualiza_creditos := True;
+  actualiza_creditos := False;
+  actualiza_notas:= False;
   actualiza_particulares := False;
   actualiza_facturas := False;
 
@@ -503,6 +504,92 @@ begin
                 end;
 
               List.SaveToFile(ExtractFilePath(ParamStr(0)) + '/Update/Creditos');
+              Total := Total + D.IBQueryMicrosip.RecordCount;
+
+              {$ENDREGION}
+            end;
+
+          if actualiza_notas then
+            begin
+              {$REGION 'REVISA LA CANTIDAD DE NOTAS DE CREDITO A SUBIR O ACTUALIZAR'}
+
+              List.Clear;
+
+              if (FileExists(ExtractFilePath(ParamStr(0)) + '/Update/Notas')) then
+                begin
+                  List.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/Update/Notas');
+                end
+              else
+                begin
+                  List.Add('DOCTO_CP_ID,CONCEPTO_CP_ID,CONCEPTO_CP,FOLIO,FECHA,CLAVE_PROV,PROVEEDOR_ID,DESCRIPCION,FECHA_HORA_ULT_MODIF,CANCELADO,APLICADO,TIENE_CFD,EMPRESA_ID,EMPRESA_NOMBRE');
+                end;
+
+              D.IBQueryMicrosip.Active := False;
+              D.IBQueryMicrosip.SQL.Clear;
+              D.IBQueryMicrosip.SQL.Add('SELECT');
+              D.IBQueryMicrosip.SQL.Add('       dc.docto_cp_id,');
+              D.IBQueryMicrosip.SQL.Add('       dc.concepto_cp_id,');
+              D.IBQueryMicrosip.SQL.Add('       cc.nombre,');
+              D.IBQueryMicrosip.SQL.Add('       dc.folio,');
+              D.IBQueryMicrosip.SQL.Add('       dc.fecha,');
+              D.IBQueryMicrosip.SQL.Add('       dc.clave_prov,');
+              D.IBQueryMicrosip.SQL.Add('       dc.proveedor_id,');
+              D.IBQueryMicrosip.SQL.Add('       dc.tipo_cambio,');
+              D.IBQueryMicrosip.SQL.Add('       dc.cancelado,');
+              D.IBQueryMicrosip.SQL.Add('       dc.aplicado,');
+              D.IBQueryMicrosip.SQL.Add('       dc.descripcion,');
+              D.IBQueryMicrosip.SQL.Add('       dc.tiene_cfd,');
+              D.IBQueryMicrosip.SQL.Add('       dc.fecha_hora_ult_modif,'); // SE AGREGO LA ","
+              D.IBQueryMicrosip.SQL.Add('       db.aplicado APLICADO_BA'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              D.IBQueryMicrosip.SQL.Add('  FROM doctos_cp dc');
+              D.IBQueryMicrosip.SQL.Add('  JOIN conceptos_cp cc ON(dc.concepto_cp_id = cc.concepto_cp_id)');
+              D.IBQueryMicrosip.SQL.Add('  LEFT JOIN doctos_entre_sis de ON(dc.docto_cp_id = de.docto_fte_id)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              D.IBQueryMicrosip.SQL.Add('  LEFT JOIN doctos_ba db ON(de.docto_dest_id = db.docto_ba_id)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              D.IBQueryMicrosip.SQL.Add(' WHERE dc.naturaleza_concepto = ''R''');
+              D.IBQueryMicrosip.SQL.Add('   AND cc.tipo = ''R''');
+              D.IBQueryMicrosip.SQL.Add('   AND (de.clave_sis_dest = ''BA'' OR de.clave_sis_dest IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              D.IBQueryMicrosip.SQL.Add('   AND (db.aplicado = ''S'' OR db.aplicado IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+
+              { if (LAST <> '') then
+                begin
+                  D.IBQueryMicrosip.SQL.Add('AND (dc.FECHA_HORA_CREACION > ''' + LAST + ''' OR dc.FECHA_HORA_ULT_MODIF > ''' + LAST + ''')');
+                end
+              else
+                begin
+                  D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.03.2025''');
+                end; }
+
+              D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
+
+              D.IBQueryMicrosip.SQL.Add('ORDER BY dc.docto_cp_id');
+              D.IBQueryMicrosip.Active := True;
+              D.IBQueryMicrosip.First;
+              while not D.IBQueryMicrosip.Eof do
+                begin
+                  // descripcion := D.IBQueryMicrosip.FieldByName('DESCRIPCION').AsString;
+                  descripcion := StringReplace(D.IBQueryMicrosip.FieldByName('DESCRIPCION').AsString, '"', '', [rfReplaceAll]);
+
+                  Line := '"' + D.IBQueryMicrosip.FieldByName('DOCTO_CP_ID').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('CONCEPTO_CP_ID').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('NOMBRE').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('FOLIO').AsString + '",';
+                  Line := Line + '"' + FormatDateTime('DD/MM/YYYY HH:NN:SS', D.IBQueryMicrosip.FieldByName('FECHA').AsDateTime) + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('CLAVE_PROV').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('PROVEEDOR_ID').AsString + '",';
+                  Line := Line + '"' + descripcion + '",';
+                  // Line := Line + '"' + QuotedStr(descripcion) + '",';
+                  Line := Line + '"' + FormatDateTime('DD/MM/YYYY HH:NN:SS', D.IBQueryMicrosip.FieldByName('FECHA_HORA_ULT_MODIF').AsDateTime) + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('CANCELADO').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('APLICADO').AsString + '",';
+                  Line := Line + '"' + D.IBQueryMicrosip.FieldByName('TIENE_CFD').AsString + '",';
+                  Line := Line + '"' + Empresa_ID + '",';
+                  Line := Line + '"' + Empresa_N + '"';
+
+                  List.Add(Line);
+                  D.IBQueryMicrosip.Next;
+                end;
+
+              List.SaveToFile(ExtractFilePath(ParamStr(0)) + '/Update/Notas');
               Total := Total + D.IBQueryMicrosip.RecordCount;
 
               {$ENDREGION}
