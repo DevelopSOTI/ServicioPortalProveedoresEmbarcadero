@@ -287,7 +287,7 @@ begin
         except
           on E : Exception do
             begin
-              Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar los detalles del credito ' + folio);
+              Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar los detalles de la nota de credito ' + folio);
               Result := False;
             end;
         end;
@@ -299,7 +299,7 @@ begin
   except
     on E : Exception do
       begin
-        Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al revisar los detalles del credito ' + folio);
+        Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al revisar los detalles de la nota de credito ' + folio);
         Result := False;
       end;
   end;
@@ -379,12 +379,12 @@ begin
                 begin
                   if (D.ADOQueryActual.RecordCount = 0) then
                     begin
-                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Registrando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
+                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Registrando nota de credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
 
-                      if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
-                        begin
+                      // if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
+                        // begin
                           try
-                            {$REGION 'REGISTRA EL ENCABEZADO DEL CREDITO EN EL PORTAL'}
+                            {$REGION 'REGISTRA EL ENCABEZADO DE LA NOTA DE CREDITO EN EL PORTAL'}
                             Command := 'INSERT INTO CREDITOS';
                             Command := Command + '(';
                             Command := Command + '  DOCTO_CP_ID,';
@@ -438,20 +438,20 @@ begin
                           except
                             on E : Exception do
                               begin
-                                Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al registrar el credito ' + folio);
+                                Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al registrar la nota de credito ' + folio);
                                 Resultado := False;
                               end;
                           end;
-                        end;
+                        // end;
                     end
                   else
                     begin
-                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Actualizando nota ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
+                      Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Actualizando nota de credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
 
-                      if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
-                        begin
+                      // if (VALIDA_COMPLEMENTO(folio, concepto, Empresa_ID, Fmt) = True) then
+                        // begin
                           try
-                            {$REGION 'ACTUALIZA EL ENCABEZADO DEL CREDITO EN EL PORTAL'}
+                            {$REGION 'ACTUALIZA EL ENCABEZADO DE LA NOTA DE CREDITO EN EL PORTAL'}
                             Command := 'UPDATE CREDITOS SET ';
                             Command := Command + '      DOCTO_CP_ID = ' + docto + ',';
                             Command := Command + '      FECHA = ' + QuotedStr(fecha) + ',';
@@ -467,15 +467,15 @@ begin
                           except
                             on E : Exception do
                               begin
-                                Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar el credito ' + folio);
+                                Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', '[' + E.ClassName + '] ' + E.Message + ' Hubo un error al actualizar la nota de credito ' + folio);
                                 Resultado := False;
                               end;
                           end;
-                        end;
+                        // end;
                     end;
                 end;
 
-              // SI EL CREDITO YA TIENE UN CFDI ASOCIADO LO QUITA DEL PORTAL
+              // SI LA NOTA DE CREDITO YA TIENE UN CFDI ASOCIADO LO QUITA DEL PORTAL
               if (D.JvCsvDataSet_Credito.FieldByName('TIENE_CFD').AsString = 'S') and (credito_id <> '') then
                 begin
                   Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Finalizando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
@@ -490,7 +490,7 @@ begin
                   D.MySQL_Command.Execute;
                 end;
 
-              // SI EL CREDITO ESTA CANCELADO
+              // SI LA NOTA DE CREDITO ESTA CANCELADA
               if (D.JvCsvDataSet_Credito.FieldByName('CANCELADO').AsString = 'S') and (credito_id <> '') then
                 begin
                   Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), 'Cancelando credito ' + D.JvCsvDataSet_Credito.FieldByName('FOLIO').AsString, '', '');
@@ -533,7 +533,7 @@ begin
       end;
 
       D.Conexion_MySQL.Connected := False;
-      //DeleteFile(PChar(ExtractFilePath(ParamStr(0)) + '/Update/Notas'));
+      DeleteFile(PChar(ExtractFilePath(ParamStr(0)) + '/Update/Notas'));
     end
   else
     begin

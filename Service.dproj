@@ -141,6 +141,7 @@
         <DCCReference Include="Func_Facturas_3_2.pas"/>
         <DCCReference Include="Func_Facturas_3_3.pas"/>
         <DCCReference Include="Func_Notas.pas"/>
+        <DCCReference Include="Func_Complementos.pas"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

@@ -135,7 +135,9 @@ Function CALCULA_REGISTROS_EMPRESAS(var Total :Integer):Boolean;
     Empresa_ID, Empresa_N, LAST, Line: string;
     // XML :string;
     List :TStringList;
-    actualiza_almacenes, actualiza_monedas, actualiza_proveedores, actualiza_recepciones, actualiza_creditos, actualiza_notas, actualiza_particulares, actualiza_facturas :Boolean;
+    actualiza_almacenes, actualiza_monedas, actualiza_proveedores,
+    actualiza_recepciones, actualiza_creditos, actualiza_notas,
+    actualiza_particulares, actualiza_facturas, actualiza_complementos :Boolean;
     descripcion: string;
 begin
   List := TStringList.Create;
@@ -148,7 +150,8 @@ begin
   actualiza_creditos := False;
   actualiza_notas:= False;
   actualiza_particulares := False;
-  actualiza_facturas := False;
+  actualiza_facturas := True;
+  actualiza_complementos := False;
 
   try
     D.ADOQueryEmpresas.Active := False;
@@ -279,7 +282,7 @@ begin
                 end
               else
                 begin
-                  List.Add('PROVEEDOR_ID,NOMBRE,ESTATUS,CLAVE_PROV,FECHA_HORA_ULT_MODIF,PCTJE_RECHAZO,REFERENCIA,RFC_CURP,PERMITIR_SIN_RECEPCION,EMPRESA_ID');
+                  List.Add('PROVEEDOR_ID,NOMBRE,ESTATUS,CLAVE_PROV,FECHA_HORA_ULT_MODIF,PCTJE_RECHAZO,REFERENCIA,RFC_CURP,PERMITIR_SIN_RECEPCION,ADJUNTAR_ARCHIVOS,EMPRESA_ID');
                 end;
 
               D.IBQueryMicrosip.Active := False;
@@ -293,7 +296,8 @@ begin
               D.IBQueryMicrosip.SQL.Add('       p.rfc_curp,');
               D.IBQueryMicrosip.SQL.Add('       l.permitir_sin_recepcion,');
               D.IBQueryMicrosip.SQL.Add('       l.pctje_rechazo,');
-              D.IBQueryMicrosip.SQL.Add('       l.referencia');
+              D.IBQueryMicrosip.SQL.Add('       l.referencia,');
+              D.IBQueryMicrosip.SQL.Add('       l.adjuntar_archivos');
               D.IBQueryMicrosip.SQL.Add('  FROM proveedores p');
               D.IBQueryMicrosip.SQL.Add('  JOIN claves_proveedores c ON (p.proveedor_id = c.proveedor_id)');
               D.IBQueryMicrosip.SQL.Add('  JOIN libres_proveedor l ON (p.proveedor_id = l.proveedor_id )');
@@ -320,6 +324,15 @@ begin
                   Line := Line + '"' + D.IBQueryMicrosip.FieldByName('RFC_CURP').AsString + '",';
 
                   if (D.IBQueryMicrosip.FieldByName('PERMITIR_SIN_RECEPCION').AsString = 'S') then
+                    begin
+                      Line := Line + '"SI",';
+                    end
+                  else
+                    begin
+                      Line := Line + '"NO",';
+                    end;
+
+                  if (D.IBQueryMicrosip.FieldByName('ADJUNTAR_ARCHIVOS').AsString = 'S') then
                     begin
                       Line := Line + '"SI",';
                     end
@@ -453,27 +466,27 @@ begin
               D.IBQueryMicrosip.SQL.Add('       dc.aplicado,');
               D.IBQueryMicrosip.SQL.Add('       dc.descripcion,');
               D.IBQueryMicrosip.SQL.Add('       dc.tiene_cfd,');
-              D.IBQueryMicrosip.SQL.Add('       dc.fecha_hora_ult_modif,'); // SE AGREGO LA ","
-              D.IBQueryMicrosip.SQL.Add('       db.aplicado APLICADO_BA'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              D.IBQueryMicrosip.SQL.Add('       dc.fecha_hora_ult_modif'); // SE AGREGO LA ","
+              // D.IBQueryMicrosip.SQL.Add('       db.aplicado APLICADO_BA'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
               D.IBQueryMicrosip.SQL.Add('  FROM doctos_cp dc');
               D.IBQueryMicrosip.SQL.Add('  JOIN conceptos_cp cc ON(dc.concepto_cp_id = cc.concepto_cp_id)');
               D.IBQueryMicrosip.SQL.Add('  LEFT JOIN doctos_entre_sis de ON(dc.docto_cp_id = de.docto_fte_id)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
-              D.IBQueryMicrosip.SQL.Add('  LEFT JOIN doctos_ba db ON(de.docto_dest_id = db.docto_ba_id)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              // D.IBQueryMicrosip.SQL.Add('  LEFT JOIN doctos_ba db ON(de.docto_dest_id = db.docto_ba_id)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
               D.IBQueryMicrosip.SQL.Add(' WHERE dc.naturaleza_concepto = ''R''');
               D.IBQueryMicrosip.SQL.Add('   AND cc.tipo = ''P''');
-              D.IBQueryMicrosip.SQL.Add('   AND (de.clave_sis_dest = ''BA'' OR de.clave_sis_dest IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
-              D.IBQueryMicrosip.SQL.Add('   AND (db.aplicado = ''S'' OR db.aplicado IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              // D.IBQueryMicrosip.SQL.Add('   AND (de.clave_sis_dest = ''BA'' OR de.clave_sis_dest IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
+              // D.IBQueryMicrosip.SQL.Add('   AND (db.aplicado = ''S'' OR db.aplicado IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
 
-              { if (LAST <> '') then
+              if (LAST <> '') then
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND (dc.FECHA_HORA_CREACION > ''' + LAST + ''' OR dc.FECHA_HORA_ULT_MODIF > ''' + LAST + ''')');
                 end
               else
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.03.2025''');
-                end; }
+                end; // }
 
-              D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
+              // D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
 
               D.IBQueryMicrosip.SQL.Add('ORDER BY dc.docto_cp_id');
               D.IBQueryMicrosip.Active := True;
@@ -550,16 +563,16 @@ begin
               D.IBQueryMicrosip.SQL.Add('   AND (de.clave_sis_dest = ''BA'' OR de.clave_sis_dest IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
               D.IBQueryMicrosip.SQL.Add('   AND (db.aplicado = ''S'' OR db.aplicado IS NULL)'); // SE AGREGO PARA VALIDAR PAGO LIBERADO
 
-              { if (LAST <> '') then
+              if (LAST <> '') then
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND (dc.FECHA_HORA_CREACION > ''' + LAST + ''' OR dc.FECHA_HORA_ULT_MODIF > ''' + LAST + ''')');
                 end
               else
                 begin
                   D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.03.2025''');
-                end; }
+                end; // }
 
-              D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
+              // D.IBQueryMicrosip.SQL.Add('AND dc.fecha > ''01.01.2025''');
 
               D.IBQueryMicrosip.SQL.Add('ORDER BY dc.docto_cp_id');
               D.IBQueryMicrosip.Active := True;
@@ -652,7 +665,7 @@ begin
 
           if actualiza_facturas then
             begin
-              {$REGION 'REVISA FACTURAS A INSERTAR EN 3.3'}
+              {$REGION 'REVISA FACTURAS A INSERTAR EN MICROSIP'}
 
               if (D.AplicaFacturas = True) then
                 begin
@@ -758,6 +771,92 @@ begin
 
               {$ENDREGION}
             end;
+
+          if actualiza_complementos then
+            begin
+              {$REGION 'REVISA COMPLEMENTOS A INSERTAR EN MICROSIP'}
+
+              if (D.AplicaFacturas = True) then
+                begin
+                  List.Clear;
+
+                  if (FileExists(ExtractFilePath(ParamStr(0)) + '/Update/Complementos')) then
+                    begin
+                      List.LoadFromFile(ExtractFilePath(ParamStr(0)) + '/Update/Complementos');
+                    end
+                  else
+                    begin
+                      List.Add('DOCTO_CP_ID,SERIE,FOLIO_PAGO,MONTO,MONEDA_PAGO,CREDITO_FK,FOLIO_CREDITO,FECHA_PAGO,FECHA_COMPLEMENTO,PROVEEDOR_ID,RFC,NOMBRE,UUID,EMPRESA_ID,EMPRESA_NOMBRE');
+                    end;
+
+                  D.ADOQueryActual.Active := False;
+                  D.ADOQueryActual.SQL.Clear;
+                  D.ADOQueryActual.SQL.Add('SELECT');
+                  D.ADOQueryActual.SQL.Add('       F.DOCTO_CP_ID,');
+                  D.ADOQueryActual.SQL.Add('       F.SERIE,');
+                  D.ADOQueryActual.SQL.Add('       F.FOLIO AS FOLIO_PAGO,');
+                  D.ADOQueryActual.SQL.Add('       F.MONTO,');
+                  D.ADOQueryActual.SQL.Add('       F.MONEDA_PAGO,');
+                  D.ADOQueryActual.SQL.Add('       F.CREDITO_FK,');
+                  D.ADOQueryActual.SQL.Add('       C.FOLIO AS FOLIO_CREDITO,');
+                  D.ADOQueryActual.SQL.Add('       F.FECHA_PAGO,');
+                  D.ADOQueryActual.SQL.Add('       F.FECHA AS FECHA_COMPLEMENTO,');
+                  D.ADOQueryActual.SQL.Add('       F.PROVEEDOR_FK,');
+                  D.ADOQueryActual.SQL.Add('       F.EMISOR_RFC AS RFC,');
+                  D.ADOQueryActual.SQL.Add('       P.NOMBRE,');
+                  D.ADOQueryActual.SQL.Add('       F.UUID');
+                  D.ADOQueryActual.SQL.Add('  FROM complemento_encabezado F');
+                  D.ADOQueryActual.SQL.Add(' INNER JOIN PROVEEDORES_MSP P ON((F.PROVEEDOR_FK = P.PROVEEDOR_ID_MSP) AND (F.EMP_FK = P.EMP_FK))');
+                  D.ADOQueryActual.SQL.Add(' INNER JOIN creditos C ON((F.CREDITO_FK = C.CREDITO_ID))');
+                  D.ADOQueryActual.SQL.Add(' INNER JOIN COMPLEMENTO_ARCHIVO R ON(F.UUID = R.UUID)');
+                  D.ADOQueryActual.SQL.Add(' WHERE F.EMP_FK = ' + Empresa_ID);
+                  D.ADOQueryActual.SQL.Add('   AND F.ESTATUS = ''S''');
+                  D.ADOQueryActual.SQL.Add('   AND C.CANCELADO = ''N''');
+                  D.ADOQueryActual.SQL.Add(' ORDER BY P.NOMBRE, F.FECHA_PAGO ASC');
+
+                  D.ADOQueryActual.Active := True;
+                  D.ADOQueryActual.First;
+                  while not D.ADOQueryActual.Eof do
+                    begin
+                      if (D.ADOQueryActual.FieldByName('UUID').AsString <> '') then
+                        begin
+                          Line := '"' + D.ADOQueryActual.FieldByName('DOCTO_CP_ID').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('SERIE').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('FOLIO_PAGO').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('MONTO').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('MONEDA_PAGO').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('CREDITO_FK').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('FOLIO_CREDITO').AsString + '",';
+                          Line := Line + '"' + FormatDateTime('DD/MM/YYYY HH:NN:SS', D.ADOQueryActual.FieldByName('FECHA_PAGO').AsDateTime) + '",';
+                          Line := Line + '"' + FormatDateTime('DD/MM/YYYY HH:NN:SS', D.ADOQueryActual.FieldByName('FECHA_COMPLEMENTO').AsDateTime) + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('PROVEEDOR_FK').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('RFC').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('NOMBRE').AsString + '",';
+                          Line := Line + '"' + D.ADOQueryActual.FieldByName('UUID').AsString + '",';
+                          Line := Line + '"' + Empresa_ID + '",';
+                          Line := Line + '"' + Empresa_N + '"';
+
+                          List.Add(Line);
+                        end
+                      else
+                        begin
+                          EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '', 'Complemento sin folio SAT ' + D.ADOQueryActual.FieldByName('FOLIO').AsString);
+                        end;
+
+                      D.ADOQueryActual.Next;
+                    end;
+
+                  List.SaveToFile(ExtractFilePath(ParamStr(0)) + '/Update/Complementos');
+                  Total := Total + D.ADOQueryActual.RecordCount;
+                end;
+
+              {$ENDREGION}
+            end;
+
+
+
+
+
         except
           on E : Exception do
             begin

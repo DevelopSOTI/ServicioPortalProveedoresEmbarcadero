@@ -49,6 +49,7 @@ type
     IBQueryXML: TIBQuery;
     DOCTOS_CM_Q: TIBQuery;
     REPOSITORIO_CFDI_Q: TIBQuery;
+    ARCHIVOS_ADJUNTOS_Q: TIBQuery;
     procedure DataModuleCreate(Sender: TObject);
     procedure svTimerSyncTimer(Sender: TObject);
   private

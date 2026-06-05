@@ -1,7 +1,7 @@
 object D: TD
   OldCreateOrder = False
   OnCreate = DataModuleCreate
-  Height = 579
+  Height = 609
   Width = 917
   object Conexion_MySQL: TADOConnection
     LoginPrompt = False
@@ -281,5 +281,14 @@ object D: TD
     ParamCheck = True
     Left = 528
     Top = 488
+  end
+  object ARCHIVOS_ADJUNTOS_Q: TIBQuery
+    Database = Conexion_Microsip
+    Transaction = Transaction_Microsip
+    BufferChunks = 1000
+    CachedUpdates = False
+    ParamCheck = True
+    Left = 528
+    Top = 544
   end
 end

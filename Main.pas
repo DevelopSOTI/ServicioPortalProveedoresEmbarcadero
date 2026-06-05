@@ -43,7 +43,7 @@ begin
   if (D.MODE_APPLI = 'F') then
     begin
       D.svTimerSync.Enabled := True;
-    end;
+    end; // }
 end;
 {$ENDREGION}
 

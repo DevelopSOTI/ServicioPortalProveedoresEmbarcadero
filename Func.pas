@@ -35,7 +35,7 @@ uses
 implementation
 
 uses
-  Data, Form, Main, Func_Catalogos, Func_Recepciones, Func_Creditos, Func_Notas, Func_Facturas_3_2, Func_Facturas_3_3;
+  Data, Form, Main, Func_Catalogos, Func_Recepciones, Func_Creditos, Func_Notas, Func_Facturas_3_2, Func_Facturas_3_3, Func_Complementos;
 
 {$REGION 'FUNCIONES PARA EL CONTROL DEL SERVICIO (INSTALACIÓN, INICIO, DETENER Y DESINSTALACIÓN)'}
 
@@ -640,16 +640,15 @@ begin
       Exit;
     end;
 
-    if (ACTUALIZA_NOTAS = False) then
+  if (ACTUALIZA_NOTAS = False) then
     begin
       Exit;
     end;
 
-
-  { if (ACTUALIZA_CREDITOS = False) then
+  if (ACTUALIZA_CREDITOS = False) then
     begin
       Exit;
-    end; }
+    end;
 
   if (D.AplicaFacturas = True) then
     begin
@@ -658,6 +657,14 @@ begin
           Exit;
         end;
     end;
+
+  { if (D.AplicaFacturas = True) then
+    begin
+      if (SELECT_COMPLEMENTOS_APLICAR = False) then
+        begin
+          Exit;
+        end;
+    end; }
 
   Result := True; // SI EN TODOS LOS PROCESOS SE DEVOLVIO VERDADERO RETORNA UN VERDADERO LA FUNCIÓN
 end;

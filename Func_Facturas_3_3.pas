@@ -7,7 +7,12 @@ uses
   IBX.IBStoredProc, Data.Win.ADODB, Data.DB, IBX.IBCustomDataSet, IBX.IBQuery,
   IBX.IBDatabase, Forms, SvCom_Timer, ActiveX, Dialogs, Winapi.ShellAPI, WinSvc,
   DateUtils, IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdMessageClient, IdSMTP, IdMessage,
-  XMLDoc, xmldom, XMLIntf;
+  XMLDoc, xmldom, XMLIntf,
+  // System.Net.HttpClient, System.Net.URLClient,   // THTTPClient
+  ComObj, Variants,                 // WinHTTP por COM (TLS lo maneja Windows)
+  System.JSON,                                    // parseo de la lista
+  System.Zip;                                     // TZipFile
+  // System.Classes, System.SysUtils, Data.DB;       // TBytes, TMemoryStream, ftBlob;
 
   // INSERCIÓN DE FACTURAS 3.3
   Function SELECT_FACTURAS_APLICAR_33():Boolean;
@@ -16,6 +21,182 @@ implementation
 
 uses
   Data, Func;
+
+const
+  // API_BASE = 'http://localhost:8081';   // ej. http://192.168.x.x:8081  (sin / al final)
+  API_BASE = 'https://lightgray-bear-551026.hostingersite.com/PortalProveedores';   // ej. http://192.168.x.x:8081  (sin / al final)
+  API_KEY  = 'acf2c85a4b64f1c21731ee4a94e82e6de0af4cf03b04c39c';        // está en PortalProveedores/.env -> portal.apiKey
+
+type
+  TAdjuntoInfo = record
+    Id: Integer;
+    NombreOriginal: string;
+    Tamano: Integer;
+  end;
+
+function VariantBytesToTBytes(const V: OleVariant): TBytes;
+var
+  Lo, Hi, Size: Integer;
+  P: Pointer;
+begin
+  SetLength(Result, 0);
+  if VarIsArray(V) then
+  begin
+    Lo := VarArrayLowBound(V, 1);
+    Hi := VarArrayHighBound(V, 1);
+    Size := Hi - Lo + 1;
+    if Size > 0 then
+    begin
+      SetLength(Result, Size);
+      P := VarArrayLock(V);
+      try
+        Move(P^, Result[0], Size);
+      finally
+        VarArrayUnlock(V);
+      end;
+    end;
+  end;
+end;
+
+// --- Lista los adjuntos de un documento desde la API del portal ---
+function LISTAR_ADJUNTOS_PORTAL(const DoctoId, Emp, Tipo: string): TArray<TAdjuntoInfo>;
+var
+  Req: OleVariant;
+  Bytes: TBytes;
+  RespStr: string;
+  Raiz: TJSONObject;
+  Arr: TJSONArray;
+  Item: TJSONObject;
+  I: Integer;
+begin
+  SetLength(Result, 0);
+  Req := CreateOleObject('WinHttp.WinHttpRequest.5.1');
+  // tiempos (ms): resolución, conexión, envío, recepción
+  Req.SetTimeouts(30000, 30000, 30000, 120000);
+  Req.Open('GET', Format('%s/api/adjuntos?docto_id=%s&emp=%s&tipo=%s',
+                         [API_BASE, DoctoId, Emp, Tipo]), False);
+  Req.SetRequestHeader('X-API-Key', API_KEY);
+  // Req.Option(9) := 2048;     // <- fuerza TLS 1.2 (solo si corres en Windows 7)
+  // Req.Option(4) := 13056;    // <- ignora errores de certificado (solo si es self-signed)
+  Req.Send;
+
+  if Req.Status <> 200 then Exit;
+
+  // Decodificamos el cuerpo como UTF-8 a mano (acentos correctos)
+  Bytes := VariantBytesToTBytes(Req.ResponseBody);
+  RespStr := TEncoding.UTF8.GetString(Bytes);
+
+  Raiz := TJSONObject.ParseJSONValue(RespStr) as TJSONObject;
+  if Raiz = nil then Exit;
+  try
+    Arr := Raiz.GetValue('adjuntos') as TJSONArray;
+    if Assigned(Arr) then
+    begin
+      SetLength(Result, Arr.Count);
+      for I := 0 to Arr.Count - 1 do
+      begin
+        Item := Arr.Items[I] as TJSONObject;
+        Result[I].Id             := (Item.GetValue('id') as TJSONNumber).AsInt;
+        Result[I].NombreOriginal := Item.GetValue('nombre_original').Value;
+        Result[I].Tamano         := (Item.GetValue('tamano') as TJSONNumber).AsInt;
+      end;
+    end;
+  finally
+    Raiz.Free;
+  end;
+end;
+
+// --- Descarga el binario de un adjunto por id ---
+function DESCARGAR_ADJUNTO(const Id: Integer; out Contenido: TBytes): Boolean;
+var
+  Req: OleVariant;
+begin
+  Result := False;
+  SetLength(Contenido, 0);
+  Req := CreateOleObject('WinHttp.WinHttpRequest.5.1');
+  Req.SetTimeouts(30000, 30000, 30000, 120000);
+  Req.Open('GET', Format('%s/api/adjuntos/%d', [API_BASE, Id]), False);
+  Req.SetRequestHeader('X-API-Key', API_KEY);
+  // Req.Option(9) := 2048;     // TLS 1.2 en Windows 7
+  // Req.Option(4) := 13056;    // ignorar cert self-signed
+  Req.Send;
+
+  if Req.Status = 200 then
+  begin
+    Contenido := VariantBytesToTBytes(Req.ResponseBody);  // binario crudo
+    Result := True;
+  end;
+end;
+
+// --- Comprime el contenido en un ZIP de una sola entrada (lo que exige Microsip) ---
+function COMPRIMIR_EN_ZIP(const NombreArchivo: string; const Contenido: TBytes): TBytes;
+var
+  Zip: TZipFile;
+  MS: TMemoryStream;
+begin
+  SetLength(Result, 0);
+  MS := TMemoryStream.Create;
+  try
+    Zip := TZipFile.Create;
+    try
+      Zip.Open(MS, zmWrite);
+      Zip.Add(Contenido, NombreArchivo, zcDeflate);   // entrada nombrada IGUAL que el archivo
+      Zip.Close;
+    finally
+      Zip.Free;
+    end;
+    SetLength(Result, MS.Size);
+    if MS.Size > 0 then
+    begin
+      MS.Position := 0;
+      MS.ReadBuffer(Result[0], MS.Size);
+    end;
+  finally
+    MS.Free;
+  end;
+end;
+
+// --- Inserta un adjunto en ARCHIVOS_ADJUNTOS de Microsip (dentro de la transacción activa) ---
+procedure INSERTAR_ADJUNTO_MICROSIP(const ELEM_DOCTO_CM_ID: Integer;
+  const NombreArchivo: string; const TamanoBytes: Integer; const ZipBytes: TBytes);
+var
+  MS: TMemoryStream;
+  ARCHIVO_ADJUNTO_ID: Integer;
+begin
+  // Nuevo ID con el mismo generador que usa el resto de la función
+  D.GEN_DOCTO_ID.Prepare;
+  D.GEN_DOCTO_ID.ExecProc;
+  ARCHIVO_ADJUNTO_ID := D.GEN_DOCTO_ID.Params[0].AsInteger;
+
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Clear;
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Add('INSERT INTO ARCHIVOS_ADJUNTOS (');
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Add('  ARCHIVO_ADJUNTO_ID, NOM_TABLA, ELEM_ID, FILE_NAME, FILE_SIZE, FILE_DATE, FILE_STREAM');
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Add(') VALUES (');
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Add('  :ARCHIVO_ADJUNTO_ID, :NOM_TABLA, :ELEM_ID, :FILE_NAME, :FILE_SIZE, :FILE_DATE, :FILE_STREAM');
+  D.ARCHIVOS_ADJUNTOS_Q.SQL.Add(')');
+
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('ARCHIVO_ADJUNTO_ID').AsInteger := ARCHIVO_ADJUNTO_ID;
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('NOM_TABLA').AsString          := 'DOCTOS_CM';
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('ELEM_ID').AsInteger           := ELEM_DOCTO_CM_ID;
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('FILE_NAME').AsString          := Copy(NombreArchivo, 1, 100);
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('FILE_SIZE').AsInteger         := TamanoBytes div 1024;  // KB
+  D.ARCHIVOS_ADJUNTOS_Q.ParamByName('FILE_DATE').AsDateTime        := Now;
+
+  MS := TMemoryStream.Create;
+  try
+    if Length(ZipBytes) > 0 then
+      MS.WriteBuffer(ZipBytes[0], Length(ZipBytes));
+    MS.Position := 0;
+    D.ARCHIVOS_ADJUNTOS_Q.ParamByName('FILE_STREAM').LoadFromStream(MS, ftBlob);
+  finally
+    MS.Free;
+  end;
+
+  D.ARCHIVOS_ADJUNTOS_Q.ExecSQL;
+end;
+
+
+
 
 
 {$REGION 'ACTUALIZAR_FACTURA_PORTAL_33 - FUNCIÓN QUE ACTUALIZA LAS RECEPCIONES Y FACTURAS EN MYSQL'}
@@ -174,6 +355,8 @@ procedure APLICAR_MICROSIP_33(DOCTO_CM_ID_MYSQL, RECEP_ID, RECEPCION_ID, EMPRESA
 
     Utf8Bytes: TBytes;
     Latin1Encoding: TEncoding;
+
+    ListaAdj: TArray<TAdjuntoInfo>; Contenido, ZipBytes: TBytes; I: Integer;
 begin
   {$REGION 'BUSCO EL ID DE LA RECEPCIÓN Y DEL PROVEEDOR EN MICROSIP POR FOLIO Y PROVEEDOR'}
   try
@@ -1006,6 +1189,35 @@ begin
   end; }
   {$ENDREGION}
 
+  {$REGION 'CARGA LOS ARCHIVOS ADJUNTOS DEL PORTAL Y LOS INSERTA EN MICROSIP'}
+  try
+    ListaAdj := LISTAR_ADJUNTOS_PORTAL(DOCTO_CM_ID_MYSQL, EMPRESA_ID, 'F');
+    for I := 0 to High(ListaAdj) do
+      begin
+        if DESCARGAR_ADJUNTO(ListaAdj[I].Id, Contenido) then
+          begin
+            ZipBytes := COMPRIMIR_EN_ZIP(ListaAdj[I].NombreOriginal, Contenido);
+            INSERTAR_ADJUNTO_MICROSIP(DOCTO_CM_ID, ListaAdj[I].NombreOriginal,
+                                      Length(Contenido), ZipBytes);
+          end
+        else
+          // No abortamos toda la compra por un adjunto; solo lo registramos.
+          Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '',
+            'No se pudo descargar el adjunto id ' + IntToStr(ListaAdj[I].Id) +
+            ' de la factura ' + FOLIO_COMPRA);
+      end;
+  except
+    on E : Exception do
+      begin
+        Func.EVENT_LOG(IntToStr(D.ProgressMax), IntToStr(D.Position), '', '',
+          '[' + E.ClassName + '] ' + E.Message +
+          ' No se pudieron guardar los adjuntos de la factura ' + FOLIO_COMPRA);
+        D.Transaction_Microsip.RollbackRetaining;
+        Exit;   // quita este Exit si prefieres que la compra se guarde aunque fallen los adjuntos
+      end;
+  end;
+  {$ENDREGION}
+
 
 
 
@@ -1028,6 +1240,7 @@ begin
 
   {$REGION 'ACTUALIZA EL ESTATUS DE LA FACTURA Y LA RECEPCIÓN EN EL PORTAL'}
   // D.Transaction_Microsip.Commit;
+
   if (ACTUALIZAR_FACTURA_PORTAL_33(FOLIO_FINAL, FOLIO_RECEPCION, IntToStr(DOCTO_CM_ID), RECEP_ID) = True) then
     begin
       D.Transaction_Microsip.Commit;

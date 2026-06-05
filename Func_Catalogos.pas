@@ -269,7 +269,7 @@ end;
 Function ACTUALIZA_PROVEEDORES():Boolean;
   var
     Fmt :TFormatSettings;
-    prid, name, stat, clve, date, pctje_rechazo, referencia, rfc, s_recepcion, Empresa_ID :String;
+    prid, name, stat, clve, date, pctje_rechazo, referencia, rfc, s_recepcion, adjuntar_archivos, Empresa_ID :String;
     ConnectionString, Command :string;
 begin
   Fmt.ShortDateFormat := 'dd/mm/yyyy';
@@ -313,6 +313,7 @@ begin
               referencia := D.JvCsvDataSet_Proveedor.FieldByName('REFERENCIA').AsString;
               rfc := D.JvCsvDataSet_Proveedor.FieldByName('RFC_CURP').AsString;
               s_recepcion := D.JvCsvDataSet_Proveedor.FieldByName('PERMITIR_SIN_RECEPCION').AsString;
+              adjuntar_archivos := D.JvCsvDataSet_Proveedor.FieldByName('ADJUNTAR_ARCHIVOS').AsString;
               Empresa_ID := D.JvCsvDataSet_Proveedor.FieldByName('EMPRESA_ID').AsString;
 
               D.ADOQueryActual.Active := False;
@@ -338,7 +339,8 @@ begin
                   Command := Command + '  RFC,';
                   Command := Command + '  PROV_PRIV,';
                   Command := Command + '  PCTJE_RECHAZO,';
-                  Command := Command + '  REFERENCIA';
+                  Command := Command + '  REFERENCIA,';
+                  Command := Command + '  ADJUNTAR_ARCHIVOS';
                   Command := Command + ')';
                   Command := Command + 'VALUES';
                   Command := Command + '(';
@@ -351,7 +353,8 @@ begin
                   Command := Command + '  ' + QuotedStr(rfc) + ',';
                   Command := Command + '  ' + QuotedStr(s_recepcion) + ',';
                   Command := Command + '  ' + QuotedStr(pctje_rechazo) + ',';
-                  Command := Command + '  ' + QuotedStr(referencia);
+                  Command := Command + '  ' + QuotedStr(referencia) + ',';
+                  Command := Command + '  ' + QuotedStr(adjuntar_archivos);
                   Command := Command + ')';
                 end
               else
@@ -367,7 +370,8 @@ begin
                   Command := Command + '      RFC = ' + QuotedStr(rfc) + ',';
                   Command := Command + '      PROV_PRIV = ' + QuotedStr(s_recepcion) + ',';
                   Command := Command + '      PCTJE_RECHAZO = ' + QuotedStr(pctje_rechazo) + ', ';
-                  Command := Command + '      REFERENCIA = ' + QuotedStr(referencia) + ' ';
+                  Command := Command + '      REFERENCIA = ' + QuotedStr(referencia) + ', ';
+                  Command := Command + '      ADJUNTAR_ARCHIVOS = ' + QuotedStr(adjuntar_archivos) + ' ';
                   Command := Command + 'WHERE PROVEEDOR_ID_MSP = ' + prid;
                   Command := Command + '  AND EMP_FK = ' + Empresa_ID;
                 end;

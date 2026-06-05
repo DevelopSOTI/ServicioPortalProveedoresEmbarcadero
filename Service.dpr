@@ -12,7 +12,8 @@ uses
   Func_Creditos in 'Func_Creditos.pas',
   Func_Facturas_3_2 in 'Func_Facturas_3_2.pas',
   Func_Facturas_3_3 in 'Func_Facturas_3_3.pas',
-  Func_Notas in 'Func_Notas.pas';
+  Func_Notas in 'Func_Notas.pas',
+  Func_Complementos in 'Func_Complementos.pas';
 
 {$R *.RES}
 
